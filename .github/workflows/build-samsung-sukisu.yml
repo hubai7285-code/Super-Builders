@@ -409,19 +409,46 @@ jobs:
       run: |
         bash "$OEM_HELPERS/samsung-wifi-fix.sh" "$KERNEL_COMMON"
 
+    - name: Cache AOSP Toolchain
+      id: cache-toolchain
+      uses: actions/cache@v4
+      with:
+        path: |
+          toolchain/clang-r450784d
+          toolchain/kernel-build-tools
+        key: aosp-clang-r450784d-build-tools-v1
+
+    - name: Download AOSP Toolchain
+      if: steps.cache-toolchain.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p toolchain/clang-r450784d
+        curl -LSs "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android13-release/clang-r450784d.tar.gz" \
+          -o /tmp/clang.tar.gz
+        tar -xzf /tmp/clang.tar.gz -C toolchain/clang-r450784d
+        rm /tmp/clang.tar.gz
+        git clone --depth=1 -b main \
+          https://android.googlesource.com/kernel/prebuilts/build-tools \
+          toolchain/kernel-build-tools
+        toolchain/clang-r450784d/bin/clang --version | head -2
+
     - name: Build Kernel
       working-directory: ${{ env.SYNC_DIR }}
       env:
         LTO_MODE: ${{ inputs.lto_mode }}
       run: |
         BUILD_RC=0
+        TC="$GITHUB_WORKSPACE/toolchain"
 
         CLANG_DIR=$(find . -path '*/prebuilts/clang/host/linux-x86/clang-*' -maxdepth 6 -type d 2>/dev/null | sort -V | tail -1)
-        if [ -n "$CLANG_DIR" ] && [ -x "$(realpath "$CLANG_DIR")/bin/clang" ]; then
+        if [ -x "$TC/clang-r450784d/bin/clang" ]; then
+          export PATH="$TC/clang-r450784d/bin:$TC/kernel-build-tools/linux-x86/bin:$PATH"
+          export HOSTCFLAGS="-I$TC/kernel-build-tools/linux-x86/include"
+          export HOSTLDFLAGS="-Wl,-rpath,$TC/kernel-build-tools/linux-x86/lib64 -L$TC/kernel-build-tools/linux-x86/lib64 -fuse-ld=lld --rtlib=compiler-rt"
+          echo "Using AOSP clang r450784d"
+        elif [ -n "$CLANG_DIR" ] && [ -x "$(realpath "$CLANG_DIR")/bin/clang" ]; then
           export PATH="$(realpath "$CLANG_DIR")/bin:$PATH"
           echo "Using prebuilt clang: $CLANG_DIR"
         else
-          echo "No working prebuilt clang — installing system clang"
           sudo apt-get -qq install -y clang lld llvm >/dev/null 2>&1
           REAL_CLANG=$(command -v clang)
           printf '#!/bin/bash\nargs=()\nfor a in "$@"; do [[ "$a" == -Werror* ]] || args+=("$a"); done\nexec "%s" "${args[@]}"\n' "$REAL_CLANG" > /tmp/clang-no-werror
@@ -432,7 +459,6 @@ jobs:
           export PATH="/tmp/clang-wrap:$PATH"
         fi
 
-        # Apply LTO override if not default
         if [ "$LTO_MODE" != "thin" ]; then
           export LTO="$LTO_MODE"
         elif [ "$LTO_DEFAULT" = "thin" ]; then
@@ -480,6 +506,16 @@ jobs:
 
         cp "$IMAGE" "$ANYKERNEL/Image"
         echo "Image: $IMAGE ($(stat -c%s "$IMAGE") bytes)"
+
+        DTB_COUNT=0
+        for dts_dir in "$SYNC_DIR/arch/arm64/boot/dts" "$KERNEL_COMMON/arch/arm64/boot/dts"; do
+          [ -d "$dts_dir" ] || continue
+          while IFS= read -r dtb; do
+            cp "$dtb" "$ANYKERNEL/"
+            DTB_COUNT=$((DTB_COUNT + 1))
+          done < <(find "$dts_dir" -name "*.dtb" -type f 2>/dev/null)
+        done
+        [ "$DTB_COUNT" -gt 0 ] && echo "Collected $DTB_COUNT DTBs"
 
         if [ -n "$EXTRA_ARTIFACTS" ]; then
           IFS=',' read -ra EXTRAS <<< "$EXTRA_ARTIFACTS"
