@@ -1,3 +1,4 @@
+echo "VERSION_DIR = $VERSION_DIR | OGKI_HELPERS = $OGKI_HELPERS"
 name: "BBK OGKI - SukiSU"
 
 permissions:
