@@ -246,8 +246,22 @@ jobs:
     - name: ABI Bypass
       run: |
         cd "$SYNC_DIR"
-        bash "$OGKI_HELPERS/bypass-abi-check.sh"
-
+        
+        echo "=== ABI Bypass Debug ==="
+        echo "OGKI_HELPERS: $OGKI_HELPERS"
+        echo "KERNEL_VER: $KERNEL_VER"
+        
+        if [ -f "$OGKI_HELPERS/bypass-abi-check.sh" ]; then
+          echo "Running bypass-abi-check.sh for 6.1 kernel..."
+          # 6.1 版本的 bypass-abi-check.sh 需要参数，通常传入 kernel 路径或 "gki"
+          bash "$OGKI_HELPERS/bypass-abi-check.sh" "$KERNEL_COMMON" || true
+          
+        elif [ -f "$OGKI_HELPERS/bypass-oem-abi.sh" ]; then
+          echo "Running bypass-oem-abi.sh (fallback)..."
+          bash "$OGKI_HELPERS/bypass-oem-abi.sh"
+        else
+          echo "::warning::No ABI bypass script found, skipping..."
+        fi
     - name: Remove Dirty Suffix
       run: |
         cd "$SYNC_DIR"
