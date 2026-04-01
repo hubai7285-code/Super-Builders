@@ -412,6 +412,7 @@ jobs:
           # 可选：如果有其他 patch 目录，可以在这里手动应用
           # git apply --directory=. "$GITHUB_WORKSPACE/kernel_patches"/*.patch || true
         fi
+
     - name: Apply HMBird Patch
       if: env.HMBIRD == 'true' && env.KERNEL_VER != '6.12'
       working-directory: ${{ env.KERNEL_COMMON }}
