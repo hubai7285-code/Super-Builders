@@ -430,34 +430,42 @@ jobs:
       run: |
         bash "$OGKI_HELPERS/setup-bbg.sh" "$SYNC_DIR/kernel_platform" "$DEFCONFIG" "$DEFCONFIG_FRAGMENT"
 
-    - name: Assemble Defconfig
-      working-directory: ${{ env.SYNC_DIR }}
-      env:
-        ADD_SUSFS: ${{ inputs.add_susfs }}
-        ADD_ZEROMOUNT: ${{ inputs.add_zeromount }}
-        ADD_KPM: ${{ inputs.add_kpm }}
-        ADD_ZRAM: ${{ inputs.add_zram }}
-        LTO_MODE: ${{ inputs.lto_mode }}
+    - name: Assemble defconfig
       run: |
-        [[ "${LTO_OVERRIDE:-}" == "none" ]] && export LTO_MODE=none
-        [[ "${RUST_BUILD_REQUIRED:-}" == "true" ]] && export ADD_RUST_BUILD=true
+        echo "=== Defconfig Assembly Debug ==="
+        echo "OGKI_HELPERS: $OGKI_HELPERS"
+        echo "VERSION_DIR: $VERSION_DIR"
+        echo "ADD_SUSFS: $ADD_SUSFS"
+        echo "ADD_ZEROMOUNT: $ADD_ZEROMOUNT"
 
-        OGKI_DEFCONFIG_SCRIPT="$OGKI_HELPERS/assemble-ogki-defconfig.sh"
-        if [ -f "$OGKI_DEFCONFIG_SCRIPT" ]; then
-          KCONFIG_SEARCH_DIR="$KERNEL_COMMON" \
-            bash "$OGKI_DEFCONFIG_SCRIPT" "$DEFCONFIG" "$KSU_VARIANT"
-        else
+        cd "$KERNEL_COMMON" || cd "$SYNC_DIR/kernel_platform/common"
+
+        # 优先使用当前版本的 assemble-defconfig.sh
+        if [ -f "$OGKI_HELPERS/assemble-defconfig.sh" ]; then
+          echo "Using assemble-defconfig.sh from $VERSION_DIR"
+          HELPERS="$OGKI_HELPERS"
           FRAGMENT="$GITHUB_WORKSPACE/$VERSION_DIR/defconfig.fragment"
-          HELPERS="$GITHUB_WORKSPACE/$VERSION_DIR/build-helpers"
+          
           ASSEMBLE_FLAGS=""
           [[ "$ADD_SUSFS" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --susfs --overlayfs"
           [[ "$ADD_KPM" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --kpm"
           [[ "$ADD_ZRAM" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --zram"
-          bash "$HELPERS/assemble-defconfig.sh" "$FRAGMENT" "$DEFCONFIG_FRAGMENT" "$DEFCONFIG" $ASSEMBLE_FLAGS
+          
+          bash "$HELPERS/assemble-defconfig.sh" "$FRAGMENT" "$DEFCONFIG_FRAGMENT" "$DEFCONFIG" $ASSEMBLE_FLAGS || {
+            echo "::warning::assemble-defconfig.sh failed, trying fallback..."
+            # Fallback to 5.10 helpers if needed
+            bash "$GITHUB_WORKSPACE/android12-5.10/build-helpers/assemble-defconfig.sh" "$FRAGMENT" "$DEFCONFIG_FRAGMENT" "$DEFCONFIG" $ASSEMBLE_FLAGS || true
+          }
+        else
+          echo "::error::No assemble-defconfig.sh found!"
+          ls -la "$OGKI_HELPERS"
+          exit 1
         fi
 
-        # Explicitly disable KSU_SUSFS when not requested (some KSU variants default it on)
+        # Explicitly handle SUSFS
         [[ "$ADD_SUSFS" != "true" ]] && echo "# CONFIG_KSU_SUSFS is not set" >> "$DEFCONFIG"
+        
+        echo "Defconfig assembled successfully."
 
     - name: Build Kernel
       working-directory: ${{ env.SYNC_DIR }}
