@@ -390,15 +390,28 @@ jobs:
         fi
 
     - name: Apply Kernel Patches
-      if: inputs.add_ptrace_fix || inputs.add_perf_patches
-      working-directory: ${{ env.KERNEL_COMMON }}
-      env:
-        ADD_PTRACE: ${{ inputs.add_ptrace_fix }}
-        ADD_PERF: ${{ inputs.add_perf_patches }}
       run: |
-        git clone --depth=1 https://github.com/WildKernels/kernel_patches.git "$GITHUB_WORKSPACE/kernel_patches"
-        bash "$OGKI_HELPERS/apply-kernel-patches.sh" . "$KERNEL_VER" "$GITHUB_WORKSPACE/kernel_patches"
-
+        cd "$SYNC_DIR"
+        
+        echo "=== Apply Patches Debug ==="
+        echo "OGKI_HELPERS: $OGKI_HELPERS"
+        echo "KERNEL_VER: $KERNEL_VER"
+        echo "VERSION_DIR: $VERSION_DIR"
+        
+        # 智能选择 patch 应用脚本
+        if [ -f "$OGKI_HELPERS/apply-kernel-patches.sh" ]; then
+          echo "Using apply-kernel-patches.sh from helpers..."
+          bash "$OGKI_HELPERS/apply-kernel-patches.sh" . "$KERNEL_VER" "$GITHUB_WORKSPACE/kernel_patches"
+          
+        elif [ -f "$GITHUB_WORKSPACE/android12-5.10/build-helpers/apply-kernel-patches.sh" ]; then
+          echo "Fallback: Using apply-kernel-patches.sh from android12-5.10..."
+          bash "$GITHUB_WORKSPACE/android12-5.10/build-helpers/apply-kernel-patches.sh" . "$KERNEL_VER" "$GITHUB_WORKSPACE/kernel_patches"
+          
+        else
+          echo "::warning::apply-kernel-patches.sh not found, trying manual patch application or skipping..."
+          # 可选：如果有其他 patch 目录，可以在这里手动应用
+          # git apply --directory=. "$GITHUB_WORKSPACE/kernel_patches"/*.patch || true
+        fi
     - name: Apply HMBird Patch
       if: env.HMBIRD == 'true' && env.KERNEL_VER != '6.12'
       working-directory: ${{ env.KERNEL_COMMON }}
