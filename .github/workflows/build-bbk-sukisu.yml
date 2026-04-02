@@ -216,6 +216,21 @@ jobs:
         } >> "$GITHUB_ENV"
 
         echo "Device: $DEVICE_NAME ($BRAND) | SoC: $SOC ($CODENAME) | Kernel: $KERNEL_VER | Android: $ANDROID_VER"
+    - name: Lock OnePlus 12 to 6.1.118-android14-11-o-g64180ab070e5
+        run: |
+          echo "🔒 Locking GKI kernel for OnePlus 12 (g64180ab070e5) ..."
+          # 尝试常见 kernel 目录并强制锁定
+          for dir in kernel/common kernel_platform/common common; do
+            if [ -d "$dir" ]; then
+              cd "$dir"
+              git fetch --depth=1 origin g64180ab070e5
+              git checkout -B locked-op12 g64180ab070e5
+              git reset --hard g64180ab070e5
+              echo "✅ Successfully locked to commit: $(git rev-parse HEAD)"
+              echo "Kernel version locked: 6.1.118-android14-11-o-g64180ab070e5"
+              break
+            fi
+          done || echo "⚠️ Could not find kernel dir, continuing..."
 
     - name: Repo Init and Sync
       run: |
