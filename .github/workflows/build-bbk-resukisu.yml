@@ -236,15 +236,6 @@ jobs:
             -m "${MANIFEST_FILE}" --depth=1
         fi
 
-        
-fi
-
-git fetch origin g64180ab070e5
-git checkout g64180ab070e5
-
-echo "===> Current commit:"
-git log -1
-
         echo "SYNC_DIR=$SYNC_DIR" >> "$GITHUB_ENV"
         echo "KERNEL_COMMON=$SYNC_DIR/kernel_platform/common" >> "$GITHUB_ENV"
         echo "DEFCONFIG=$SYNC_DIR/kernel_platform/common/arch/arm64/configs/gki_defconfig" >> "$GITHUB_ENV"
