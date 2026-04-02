@@ -238,25 +238,6 @@ jobs:
 
        repo sync -c -j"$(nproc)" --no-tags --no-clone-bundle --force-sync --fail-fast
 
-echo "===> Switching to target kernel commit..."
-
-if [ -d kernel_platform/common ]; then
-  cd kernel_platform/common
-elif [ -d kernel/common ]; then
-  cd kernel/common
-elif [ -d common ]; then
-  cd common
-else
-  echo "❌ Cannot find kernel common directory"
-  exit 1
-fi
-
-git fetch origin g64180ab070e5
-git checkout g64180ab070e5
-
-echo "===> Current commit:"
-git log -1
-
         echo "SYNC_DIR=$SYNC_DIR" >> "$GITHUB_ENV"
         echo "KERNEL_COMMON=$SYNC_DIR/kernel_platform/common" >> "$GITHUB_ENV"
         echo "DEFCONFIG=$SYNC_DIR/kernel_platform/common/arch/arm64/configs/gki_defconfig" >> "$GITHUB_ENV"
