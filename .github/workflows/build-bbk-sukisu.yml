@@ -217,16 +217,6 @@ jobs:
 
         echo "Device: $DEVICE_NAME ($BRAND) | SoC: $SOC ($CODENAME) | Kernel: $KERNEL_VER | Android: $ANDROID_VER"
 
-     - name: Lock kernel to 6.1.118-android14-11-o-g64180ab070e5
-        run: |
-          echo "Locking GKI kernel to g64180ab070e5 ..."
-          cd $GITHUB_WORKSPACE || true
-          (cd kernel/common 2>/dev/null && git reset --hard g64180ab070e5) || \
-          (cd common 2>/dev/null && git reset --hard g64180ab070e5) || \
-          (cd kernel_platform/common 2>/dev/null && git reset --hard g64180ab070e5) || \
-          echo "Warning: kernel/common directory not found, skipping lock"
-          echo "Kernel should now be locked to 6.1.118-android14-11-o-g64180ab070e5"
-
     - name: Repo Init and Sync
       run: |
         SYNC_DIR="$GITHUB_WORKSPACE/ogki-source"
