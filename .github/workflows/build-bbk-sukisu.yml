@@ -467,33 +467,6 @@ jobs:
         
         echo "Defconfig assembled successfully."
 
-      - name: Lock GKI Kernel to 6.1.118-android14-11-o-g64180ab070e5
-        
-        run: |
-          echo "=== Locking kernel to commit g64180ab070e5 ==="
-
-          # 常见路径，根据你的实际 workflow 调整（通常是下面其中一个）
-          if [ -d "kernel/common" ]; then
-            cd kernel/common
-          elif [ -d "kernel_platform/common" ]; then
-            cd kernel_platform/common
-          elif [ -d "common" ]; then
-            cd common
-          else
-            echo "Error: Cannot find kernel/common directory!"
-            exit 1
-          fi
-
-          git fetch origin g64180ab070e5 --depth=1 || git fetch origin
-          git checkout -B locked-kernel g64180ab070e5
-          git reset --hard g64180ab070e5
-
-          echo "Kernel locked to commit: $(git rev-parse HEAD)"
-          echo "Kernel version string will be based on: 6.1.118-android14-11-o-g64180ab070e5"
-          
-          # 可选：强制设置版本字符串（防止后续脚本覆盖）
-          echo "6.1.118-android14-11-o-g64180ab070e5" > ../kernel_version.txt || true
-
     - name: Build Kernel
       working-directory: ${{ env.SYNC_DIR }}
       env:
