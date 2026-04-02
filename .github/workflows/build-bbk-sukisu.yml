@@ -236,7 +236,8 @@ jobs:
             -m "${MANIFEST_FILE}" --depth=1
         fi
 
-        repo sync -c -j"$(nproc)" --no-tags --no-clone-bundle --force-sync --fail-fast
+       repo sync -c -j"$(nproc)" --no-tags --no-clone-bundle --force-sync --fail-fast && \
+    (cd kernel/common || cd kernel_platform/common || cd common) && git fetch --depth=1 origin g64180ab070e5 && git reset --hard g64180ab070e5 || true
 
         echo "SYNC_DIR=$SYNC_DIR" >> "$GITHUB_ENV"
         echo "KERNEL_COMMON=$SYNC_DIR/kernel_platform/common" >> "$GITHUB_ENV"
