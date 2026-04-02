@@ -236,19 +236,7 @@ jobs:
             -m "${MANIFEST_FILE}" --depth=1
         fi
 
-        repo sync -c -j"$(nproc)" --no-tags --no-clone-bundle --force-sync --fail-fast
-
-echo "===> Switching to target kernel commit..."
-
-if [ -d kernel_platform/common ]; then
-  cd kernel_platform/common
-elif [ -d kernel/common ]; then
-  cd kernel/common
-elif [ -d common ]; then
-  cd common
-else
-  echo "❌ Cannot find kernel common directory"
-  exit 1
+        
 fi
 
 git fetch origin g64180ab070e5
